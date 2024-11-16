@@ -28,36 +28,49 @@ int map[]=
 
 void drawMap2D()
 {
-    int x;
-    int y;
-    int xo;
-    int yo;
+    // Map grid coordinates
+    int gridX; 
+    int gridY;
 
-	for (y = 0; y < mapYUnits; y++)
-	{
-		for (x = 0; x < mapXUnits; x++)
-		{
-			if (map[y * mapXUnits + x] == 1)
-			{
-				glColor3f(0.0f, 0.0f, 0.0f);
-			}
-			else
-			{
-				glColor3f(1.0f, 1.0f, 1.0f);
-			}
+    // Tile position on the screen in pixels
+    int tileScreenX; 
+    int tileScreenY;
 
-			xo = x * mapUnitSize;
-            yo = y * mapUnitSize;
+    // Loop through map rows
+    for (gridY = 0; gridY < mapYUnits; gridY++)
+    {
+        // Loop through map columns
+        for (gridX = 0; gridX < mapXUnits; gridX++)
+        {
+            // Set tile color based on map value (1 = wall, 0 = empty space)
+            if (map[gridY * mapXUnits + gridX] == 1)
+            {
+                // Black for walls
+                glColor3f(0.0f, 0.0f, 0.0f);
+            }
+            else
+            {
+                // White for empty spaces
+                glColor3f(1.0f, 1.0f, 1.0f);
+            }
 
+            // Convert grid coordinates to screen coordinates
+            tileScreenX = gridX * mapUnitSize;
+            tileScreenY = gridY * mapUnitSize;
+
+            // Draw the tile as a quad
             glBegin(GL_QUADS);
-            glVertex2i(xo + 1, yo + 1);                             
-            glVertex2i(xo + 1, yo + mapUnitSize - 1);               
-            glVertex2i(xo + mapUnitSize - 1, yo + mapUnitSize - 1); 
-            glVertex2i(xo + mapUnitSize - 1, yo + 1);               
+            // Top-left
+            glVertex2i(tileScreenX + 1, tileScreenY + 1);     
+            // Bottom-left
+            glVertex2i(tileScreenX + 1, tileScreenY + mapUnitSize - 1);         
+            // Bottom-right
+            glVertex2i(tileScreenX + mapUnitSize - 1, tileScreenY + mapUnitSize - 1);    
+            // Top-right
+            glVertex2i(tileScreenX + mapUnitSize - 1, tileScreenY + 1);                     
             glEnd();
-            
-		}
-	}
+        }
+    }
 }
 
 // Player position
@@ -84,9 +97,6 @@ void drawPlayer()
 	glVertex2f(playerX + playerDeltaX * 10, playerY + playerDeltaY * 10);
 	glEnd();
 }
-
-// Player movement speed
-float playerMovementSpeed = 10.0f;
 
 // Move the player
 void movePlayer(int key)
@@ -139,7 +149,8 @@ void init()
     // Set up the viewport and projection to match pixel dimensions
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, 800, 600, 0, -1, 1); // Map 0,0 to top-left and 800,600 to bottom-right
+    // Map 0,0 to top-left and 800,600 to bottom-right
+    glOrtho(0, 800, 600, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
