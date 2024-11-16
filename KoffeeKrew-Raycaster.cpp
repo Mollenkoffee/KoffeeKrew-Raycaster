@@ -5,7 +5,8 @@
 #include <GL/glew.h>  
 #include <GLFW/glfw3.h>
 #include <iostream>
-
+#include <math.h>
+#define PI 3.14159265358979323846
 
 // Map dimensions
 int mapXUnits = 8;
@@ -62,14 +63,25 @@ void drawMap2D()
 // Player position
 float playerX = 0.0f;
 float playerY = 0.0f;
+float playerAngle = 0.0f;
+float playerDeltaX = 0.0f;
+float playerDeltaY = 0.0f;
 
 // Draw the player
 void drawPlayer()
 {
+    // Player body
     glColor3f(1.0f, 0.0f, 0.0f);
     glPointSize(8.0f);
 	glBegin(GL_POINTS);
 	glVertex2f(playerX, playerY);
+	glEnd();
+
+    // Player direction
+    glColor3f(0.0f, 1.0f, 0.0f);
+	glBegin(GL_LINES);
+	glVertex2f(playerX, playerY);
+	glVertex2f(playerX + playerDeltaX * 10, playerY + playerDeltaY * 10);
 	glEnd();
 }
 
@@ -82,16 +94,30 @@ void movePlayer(int key)
     switch (key) 
     {
 	    case GLFW_KEY_W:
-            playerY -= playerMovementSpeed;
+            playerX += playerDeltaX;
+            playerY += playerDeltaY;
 		    break;
 	    case GLFW_KEY_S:
-		    playerY += playerMovementSpeed;
+            playerX -= playerDeltaX;
+            playerY -= playerDeltaY;
 		    break;
 	    case GLFW_KEY_A:
-		    playerX -= playerMovementSpeed;
+            playerAngle -= 0.1f;
+            if (playerAngle < 0)
+            {
+                playerAngle += 2 * PI;
+            }
+            playerDeltaX = cos(playerAngle) * 5;
+            playerDeltaY = sin(playerAngle) * 5;
 		    break;
 	    case GLFW_KEY_D:
-		    playerX += playerMovementSpeed;
+            playerAngle += 0.1f;
+            if (playerAngle > 0)
+            {
+                playerAngle -= 2 * PI;
+            }
+            playerDeltaX = cos(playerAngle) * 5;
+            playerDeltaY = sin(playerAngle) * 5;
 		    break;
 	}
 }
@@ -120,6 +146,10 @@ void init()
     // Set player starting position
     playerX = 100; 
     playerY = 100;
+
+    // Set player starting direction
+    playerDeltaX = cos(playerAngle) * 5;
+    playerDeltaY = sin(playerAngle) * 5;
 }
 
 int main()
