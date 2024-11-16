@@ -1,10 +1,65 @@
 ﻿// KoffeeKrew-Raycaster.cpp : Defines the entry point for the application.
 //
 
-#include <GL/glew.h>  // Include GLEW before GLFW or any other OpenGL headers
+// Include GLEW before GLFW or any other OpenGL headers
+#include <GL/glew.h>  
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+
+// Map dimensions
+int mapXUnits = 8;
+int mapYUnits = 8;
+int mapUnitSize = 64;
+
+// Map : 0 = empty space : 1 = wall
+int map[]=
+{
+    1, 1, 1, 1, 1, 1, 1, 1,
+	1, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 1, 0, 0, 0, 1,
+	1, 0, 0, 0, 1, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 1,
+	1, 1, 1, 1, 1, 1, 1, 1
+};
+
+void drawMap2D()
+{
+    int x;
+    int y;
+    int xo;
+    int yo;
+
+	for (y = 0; y < mapYUnits; y++)
+	{
+		for (x = 0; x < mapXUnits; x++)
+		{
+			if (map[y * mapXUnits + x] == 1)
+			{
+				glColor3f(0.0f, 0.0f, 0.0f);
+			}
+			else
+			{
+				glColor3f(1.0f, 1.0f, 1.0f);
+			}
+
+			xo = x * mapUnitSize;
+            yo = y * mapUnitSize;
+
+            glBegin(GL_QUADS);
+            glVertex2i(xo + 1, yo + 1);                             
+            glVertex2i(xo + 1, yo + mapUnitSize - 1);               
+            glVertex2i(xo + mapUnitSize - 1, yo + mapUnitSize - 1); 
+            glVertex2i(xo + mapUnitSize - 1, yo + 1);               
+            glEnd();
+            
+		}
+	}
+}
+
+// Player position
 float playerX = 0.0f;
 float playerY = 0.0f;
 
@@ -18,22 +73,25 @@ void drawPlayer()
 	glEnd();
 }
 
+// Player movement speed
+float playerMovementSpeed = 10.0f;
+
 // Move the player
 void movePlayer(int key)
 {
     switch (key) 
     {
 	    case GLFW_KEY_W:
-            playerY += 0.1f;
+            playerY -= playerMovementSpeed;
 		    break;
 	    case GLFW_KEY_S:
-		    playerY -= 0.1f;
+		    playerY += playerMovementSpeed;
 		    break;
 	    case GLFW_KEY_A:
-		    playerX -= 0.1f;
+		    playerX -= playerMovementSpeed;
 		    break;
 	    case GLFW_KEY_D:
-		    playerX += 0.1f;
+		    playerX += playerMovementSpeed;
 		    break;
 	}
 }
@@ -45,6 +103,23 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	{
 		movePlayer(key);
 	}
+}
+
+void init()
+{
+    // Set the clear color
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f); // Set a gray background
+
+    // Set up the viewport and projection to match pixel dimensions
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, 800, 600, 0, -1, 1); // Map 0,0 to top-left and 800,600 to bottom-right
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    // Set player starting position
+    playerX = 100; 
+    playerY = 100;
 }
 
 int main()
@@ -75,6 +150,9 @@ int main()
         return -1;
     }
 
+    // Initialize OpenGL settings
+    init();
+
     // Register the key callback function
     glfwSetKeyCallback(window, keyCallback);
 
@@ -82,6 +160,9 @@ int main()
     while (!glfwWindowShouldClose(window)) {
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT);
+
+        // Draw the map
+        drawMap2D();
 
         // Draw the player
         drawPlayer();
