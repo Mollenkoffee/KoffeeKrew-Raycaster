@@ -11,11 +11,15 @@
 #define NO_HIT_DISTANCE 1e30f
 #define FOV (PI / 3)
 #define MAX_DEPTH_OF_FIELD 8
-#define PLAYER_SPEED 5.0f
+#define PLAYER_SPEED 100.0f
 
 // Window dimensions
 int windowWidth = 800;
 int windowHeight = 600;
+
+// Time tracking
+float deltaTime = 0.0f;
+float lastFrameTime = 0.0f;
 
 // Map dimensions
 const int mapXUnits = 8;
@@ -312,6 +316,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     {
         switch (key)
         {
+        /* Deprecated in favor of processInput function
         case GLFW_KEY_W:
             playerX += playerDeltaX * PLAYER_SPEED;
             playerY += playerDeltaY * PLAYER_SPEED;
@@ -332,10 +337,44 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             playerDeltaX = cos(playerAngle);
             playerDeltaY = sin(playerAngle);
             break;
+        */
         case GLFW_KEY_M:
             renderMap = !renderMap;
             break;
         }
+    }
+}
+
+void processInput(GLFWwindow* window)
+{
+    // Adjust speed by frame time
+    float moveSpeed = PLAYER_SPEED * deltaTime; 
+    // Adjust rotation by frame time
+    float rotateSpeed = 2.0f * deltaTime; 
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    {
+        playerX += playerDeltaX * moveSpeed;
+        playerY += playerDeltaY * moveSpeed;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    {
+        playerX -= playerDeltaX * moveSpeed;
+        playerY -= playerDeltaY * moveSpeed;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {
+        playerAngle -= rotateSpeed;
+        playerAngle = normalizeAngle(playerAngle);
+        playerDeltaX = cos(playerAngle);
+        playerDeltaY = sin(playerAngle);
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
+        playerAngle += rotateSpeed;
+        playerAngle = normalizeAngle(playerAngle);
+        playerDeltaX = cos(playerAngle);
+        playerDeltaY = sin(playerAngle);
     }
 }
 
@@ -384,6 +423,7 @@ int main()
 
     // Register the viewport adjustment callback function
     glfwSetFramebufferSizeCallback(window, adjustViewport);
+    
     // Register the key callback function
     glfwSetKeyCallback(window, keyCallback);
 
@@ -400,6 +440,14 @@ int main()
     // Main application loop
     while (!glfwWindowShouldClose(window))
     {
+        // Calculate delta time
+        float currentFrameTime = glfwGetTime();
+        deltaTime = currentFrameTime - lastFrameTime;
+        lastFrameTime = currentFrameTime;
+
+        // Process input
+        processInput(window);
+
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT);
         if (renderMap)
@@ -418,7 +466,6 @@ int main()
         // Poll for and process events
         glfwPollEvents();
     }
-
     // Cleanup
     glfwDestroyWindow(window);
     glfwTerminate();
