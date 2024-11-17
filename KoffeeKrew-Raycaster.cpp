@@ -26,12 +26,12 @@ const int mapUnitSize = 64;
 const int map[] =
 {
     1, 1, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 1, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 1,
+    1, 1, 0, 1, 1, 0, 1, 1,
+    1, 1, 0, 1, 1, 0, 1, 1,
     1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 1, 0, 0, 0, 1,
-    1, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 1, 1, 0, 0, 1,
     1, 1, 1, 1, 1, 1, 1, 1
 };
 
@@ -204,80 +204,108 @@ float castRayVertical(float rayAngle, float& hitX, float& hitY)
     return NO_HIT_DISTANCE;
 }
 
+// Draw wall slice
+void drawWallSlice(float x, float wallHeight, bool isVertical)
+{
+    float screenHeight = 600.0f;
+    float wallTop = (screenHeight / 2) - (wallHeight / 2);
+    float wallBottom = (screenHeight / 2) + (wallHeight / 2);
+
+    if (isVertical)
+    {
+        // Slightly darker for vertical walls
+        glColor3f(0.6f, 0.6f, 0.6f); 
+    }
+    else
+    {
+        // Brighter for horizontal walls
+        glColor3f(0.8f, 0.8f, 0.8f);
+    }
+
+    glBegin(GL_QUADS);
+    glVertex2f(x, wallTop);
+    glVertex2f(x + (800.0f / 60.0f), wallTop);
+    glVertex2f(x + (800.0f / 60.0f), wallBottom);
+    glVertex2f(x, wallBottom);
+    glEnd();
+}
+
 // Draw rays
 void drawRays3D()
 {
-    float rayAngle = playerAngle - (FOV / 2);
+    // Start ray at the left edge of FOV
+    float rayAngle = playerAngle - (FOV / 2); 
+
+    rayAngle = normalizeAngle(rayAngle);
+
     for (int rayIndex = 0; rayIndex < 60; rayIndex++)
     {
         float horizontalHitX, horizontalHitY, verticalHitX, verticalHitY;
+
+        // Cast horizontal and vertical rays
         float horizontalDistance = castRayHorizontal(rayAngle, horizontalHitX, horizontalHitY);
         float verticalDistance = castRayVertical(rayAngle, verticalHitX, verticalHitY);
 
-        if (horizontalDistance < verticalDistance)
-        {
-            glColor3f(0.0f, 1.0f, 0.0f);
-            glBegin(GL_LINES);
-            glVertex2f(playerX, playerY);
-            glVertex2f(horizontalHitX, horizontalHitY);
-            glEnd();
-        }
-        else
-        {
-            glColor3f(0.0f, 0.0f, 1.0f);
-            glBegin(GL_LINES);
-            glVertex2f(playerX, playerY);
-            glVertex2f(verticalHitX, verticalHitY);
-            glEnd();
-        }
-        rayAngle += (FOV / 60);
+        // Determine the closer hit
+        bool isVerticalHit = verticalDistance < horizontalDistance;
+        float rayDistance = isVerticalHit ? verticalDistance : horizontalDistance;
+
+        // Correct fisheye distortion
+        rayDistance *= cos(playerAngle - rayAngle);
+
+        // Calculate wall height
+        float wallHeight = (mapUnitSize * 300.0f) / rayDistance;
+
+        // Draw the wall slice
+        drawWallSlice(rayIndex * (800.0f / 60.0f), wallHeight, isVerticalHit);
+
+        // Move to the next ray
+        rayAngle += (FOV / 60.0f);
         rayAngle = normalizeAngle(rayAngle);
     }
 }
 
-// Move the player
-void movePlayer(int key)
-{
-    switch (key)
-    {
-    case GLFW_KEY_W:
-        playerX += playerDeltaX * PLAYER_SPEED;
-        playerY += playerDeltaY * PLAYER_SPEED;
-        break;
-    case GLFW_KEY_S:
-        playerX -= playerDeltaX * PLAYER_SPEED;
-        playerY -= playerDeltaY * PLAYER_SPEED;
-        break;
-    case GLFW_KEY_A:
-        playerAngle -= 0.1f;
-        playerAngle = normalizeAngle(playerAngle);
-        playerDeltaX = cos(playerAngle);
-        playerDeltaY = sin(playerAngle);
-        break;
-    case GLFW_KEY_D:
-        playerAngle += 0.1f;
-        playerAngle = normalizeAngle(playerAngle);
-        playerDeltaX = cos(playerAngle);
-        playerDeltaY = sin(playerAngle);
-        break;
-    }
-}
+// Start in 2D map mode
+bool renderMap = true;
 
 // Callback function for key presses
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
-        movePlayer(key);
+        switch (key)
+        {
+        case GLFW_KEY_W:
+            playerX += playerDeltaX * PLAYER_SPEED;
+            playerY += playerDeltaY * PLAYER_SPEED;
+            break;
+        case GLFW_KEY_S:
+            playerX -= playerDeltaX * PLAYER_SPEED;
+            playerY -= playerDeltaY * PLAYER_SPEED;
+            break;
+        case GLFW_KEY_A:
+            playerAngle -= 0.1f;
+            playerAngle = normalizeAngle(playerAngle);
+            playerDeltaX = cos(playerAngle);
+            playerDeltaY = sin(playerAngle);
+            break;
+        case GLFW_KEY_D:
+            playerAngle += 0.1f;
+            playerAngle = normalizeAngle(playerAngle);
+            playerDeltaX = cos(playerAngle);
+            playerDeltaY = sin(playerAngle);
+            break;
+        case GLFW_KEY_M:
+            renderMap = !renderMap;
+            break;
+        }
     }
 }
 
 // Initialize OpenGL settings
 void init()
 {
-    // Set the clear color
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-    // Set up the viewport and projection to match pixel dimensions
+    glClearColor(0.4f, 0.4f, 0.4f, 1.0f); // Set the clear color (gray background)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(0, 800, 600, 0, -1, 1); // Map 0,0 to top-left and 800,600 to bottom-right
@@ -285,9 +313,11 @@ void init()
     glLoadIdentity();
 
     // Set player starting position
-    playerX = 100;
-    playerY = 100;
-    // Set player starting direction
+    playerX = 150.0f;
+    playerY = 150.0f;
+    playerAngle = PI / 4;
+
+    // Calculate movement deltas
     playerDeltaX = cos(playerAngle);
     playerDeltaY = sin(playerAngle);
 }
@@ -334,12 +364,17 @@ int main()
     {
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT);
-        // Draw the map
-        drawMap2D();
-        // Draw the player
-        drawPlayer();
-        // Draw the rays
-        drawRays3D();
+        if (renderMap)
+        {
+            // Draw the map and player in 2D mode
+            drawMap2D();
+            drawPlayer();
+        }
+        else
+        {
+            // Draw the 3D walls
+            drawRays3D();
+        }
         // Swap front and back buffers
         glfwSwapBuffers(window);
         // Poll for and process events
