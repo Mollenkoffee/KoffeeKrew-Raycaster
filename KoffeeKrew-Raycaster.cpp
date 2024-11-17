@@ -13,6 +13,10 @@
 #define MAX_DEPTH_OF_FIELD 8
 #define PLAYER_SPEED 5.0f
 
+// Window dimensions
+int windowWidth = 800;
+int windowHeight = 600;
+
 // Map dimensions
 const int mapXUnits = 8;
 const int mapYUnits = 8;
@@ -36,11 +40,11 @@ const int map[] =
 };
 
 // Player state
-float playerX = 0.0f;
-float playerY = 0.0f;
-float playerAngle = 0.0f;
-float playerDeltaX = 0.0f;
-float playerDeltaY = 0.0f;
+float playerX = 150.0f;
+float playerY = 150.0f;
+float playerAngle = PI / 4;
+float playerDeltaX = cos(playerAngle);
+float playerDeltaY = sin(playerAngle);
 
 // Normalize angle to be between 0 and 2*PI
 float normalizeAngle(float angle)
@@ -56,9 +60,29 @@ float normalizeAngle(float angle)
     return angle;
 }
 
+// Adjust the OpenGL viewport to fill the window
+void adjustViewport(GLFWwindow* window, int width, int height)
+{
+    windowWidth = width;
+    windowHeight = height;
+
+    glViewport(0, 0, width, height);
+
+    // Update the orthographic projection
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, width, height, 0, -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
 // Draw the 2D map
 void drawMap2D()
 {
+    // Calculate tile width and height
+    float tileWidth = (float) windowWidth / mapXUnits;
+    float tileHeight = (float) windowHeight / mapYUnits;
+
     // Loop through map rows
     for (int gridY = 0; gridY < mapYUnits; gridY++)
     {
@@ -77,20 +101,20 @@ void drawMap2D()
                 glColor3f(1.0f, 1.0f, 1.0f); 
             }
 
-            // Convert grid coordinates to screen coordinates
-            int tileScreenX = gridX * mapUnitSize;
-            int tileScreenY = gridY * mapUnitSize;
+            // Calculate tile position
+            float tileX = gridX * tileWidth;
+            float tileY = gridY * tileHeight;
 
             // Draw the tile as a quad
             glBegin(GL_QUADS);
             // Top-left
-            glVertex2i(tileScreenX + 1, tileScreenY + 1);
+            glVertex2f(tileX + 1, tileY + 1);
             // Bottom-left
-            glVertex2i(tileScreenX + 1, tileScreenY + mapUnitSize - 1);
+            glVertex2f(tileX + 1, tileY + tileHeight - 1);
             // Bottom-right
-            glVertex2i(tileScreenX + mapUnitSize - 1, tileScreenY + mapUnitSize - 1);
+            glVertex2f(tileX + tileWidth - 1, tileY + tileHeight - 1);
             // Top-right
-            glVertex2i(tileScreenX + mapUnitSize - 1, tileScreenY + 1);
+            glVertex2f(tileX + tileWidth - 1, tileY + 1);
             glEnd();
         }
     }
@@ -99,171 +123,184 @@ void drawMap2D()
 // Draw the player
 void drawPlayer()
 {
+    // Calculate scale factors
+    float scaleX = (float) windowWidth / (mapXUnits * mapUnitSize);
+    float scaleY = (float) windowHeight / (mapYUnits * mapUnitSize);
+
+    // Convert player position to screen coordinates
+    float playerScreenX = playerX * scaleX;
+    float playerScreenY = playerY * scaleY;
+
     // Player position
     glColor3f(1.0f, 0.0f, 0.0f);
     glPointSize(8.0f);
     glBegin(GL_POINTS);
-    glVertex2f(playerX, playerY);
+    glVertex2f(playerScreenX, playerScreenY);
     glEnd();
 
     // Player direction
     glColor3f(1.0f, 0.0f, 0.0f);
     glBegin(GL_LINES);
-    glVertex2f(playerX, playerY);
-    glVertex2f(playerX + playerDeltaX * 10, playerY + playerDeltaY * 10);
+    glVertex2f(playerScreenX, playerScreenY);
+    glVertex2f(playerScreenX + playerDeltaX * 10 * scaleX, playerScreenY + playerDeltaY * 10 * scaleY);
     glEnd();
 }
 
-// Cast horizontal rays
-float castRayHorizontal(float rayAngle, float& hitX, float& hitY)
-{
-    rayAngle = normalizeAngle(rayAngle);
-    float inverseSlope = -1.0f / tan(rayAngle);
-    float rayStepX, rayStepY;
-    int depthOfField = 0;
-
-    if (rayAngle > PI)
+    // Cast horizontal rays
+    float castRayHorizontal(float rayAngle, float& hitX, float& hitY)
     {
-        hitY = GRID_Y(playerY) * mapUnitSize - 0.0001f;
-        hitX = playerX + (playerY - hitY) * inverseSlope;
-        rayStepY = -mapUnitSize;
-        rayStepX = -rayStepY * inverseSlope;
-    }
-    else if (rayAngle < PI)
-    {
-        hitY = GRID_Y(playerY) * mapUnitSize + mapUnitSize;
-        hitX = playerX + (playerY - hitY) * inverseSlope;
-        rayStepY = mapUnitSize;
-        rayStepX = -rayStepY * inverseSlope;
-    }
-    else
-    {
-        return NO_HIT_DISTANCE;
-    }
-
-    while (depthOfField < MAX_DEPTH_OF_FIELD)
-    {
-        int mapGridX = GRID_X(hitX);
-        int mapGridY = GRID_Y(hitY);
-        int mapTileIndex = mapGridY * mapXUnits + mapGridX;
-
-        if (mapTileIndex >= 0 && mapTileIndex < mapXUnits * mapYUnits && map[mapTileIndex] == 1)
-        {
-            return sqrt((hitX - playerX) * (hitX - playerX) + (hitY - playerY) * (hitY - playerY));
-        }
-
-        hitX += rayStepX;
-        hitY += rayStepY;
-        depthOfField++;
-    }
-    return NO_HIT_DISTANCE;
-}
-
-// Cast vertical rays
-float castRayVertical(float rayAngle, float& hitX, float& hitY)
-{
-    rayAngle = normalizeAngle(rayAngle);
-    float slope = -tan(rayAngle);
-    float rayStepX, rayStepY;
-    int depthOfField = 0;
-
-    if (rayAngle > PI / 2 && rayAngle < 3 * PI / 2)
-    {
-        hitX = GRID_X(playerX) * mapUnitSize - 0.0001f;
-        hitY = (playerX - hitX) * slope + playerY;
-        rayStepX = -mapUnitSize;
-        rayStepY = -rayStepX * slope;
-    }
-    else if (rayAngle < PI / 2 || rayAngle > 3 * PI / 2)
-    {
-        hitX = GRID_X(playerX) * mapUnitSize + mapUnitSize;
-        hitY = (playerX - hitX) * slope + playerY;
-        rayStepX = mapUnitSize;
-        rayStepY = -rayStepX * slope;
-    }
-    else
-    {
-        return NO_HIT_DISTANCE;
-    }
-
-    while (depthOfField < MAX_DEPTH_OF_FIELD)
-    {
-        int mapGridX = GRID_X(hitX);
-        int mapGridY = GRID_Y(hitY);
-        int mapTileIndex = mapGridY * mapXUnits + mapGridX;
-
-        if (mapTileIndex >= 0 && mapTileIndex < mapXUnits * mapYUnits && map[mapTileIndex] == 1)
-        {
-            return sqrt((hitX - playerX) * (hitX - playerX) + (hitY - playerY) * (hitY - playerY));
-        }
-
-        hitX += rayStepX;
-        hitY += rayStepY;
-        depthOfField++;
-    }
-    return NO_HIT_DISTANCE;
-}
-
-// Draw wall slice
-void drawWallSlice(float x, float wallHeight, bool isVertical)
-{
-    float screenHeight = 600.0f;
-    float wallTop = (screenHeight / 2) - (wallHeight / 2);
-    float wallBottom = (screenHeight / 2) + (wallHeight / 2);
-
-    if (isVertical)
-    {
-        // Slightly darker for vertical walls
-        glColor3f(0.6f, 0.6f, 0.6f); 
-    }
-    else
-    {
-        // Brighter for horizontal walls
-        glColor3f(0.8f, 0.8f, 0.8f);
-    }
-
-    glBegin(GL_QUADS);
-    glVertex2f(x, wallTop);
-    glVertex2f(x + (800.0f / 60.0f), wallTop);
-    glVertex2f(x + (800.0f / 60.0f), wallBottom);
-    glVertex2f(x, wallBottom);
-    glEnd();
-}
-
-// Draw rays
-void drawRays3D()
-{
-    // Start ray at the left edge of FOV
-    float rayAngle = playerAngle - (FOV / 2); 
-
-    rayAngle = normalizeAngle(rayAngle);
-
-    for (int rayIndex = 0; rayIndex < 60; rayIndex++)
-    {
-        float horizontalHitX, horizontalHitY, verticalHitX, verticalHitY;
-
-        // Cast horizontal and vertical rays
-        float horizontalDistance = castRayHorizontal(rayAngle, horizontalHitX, horizontalHitY);
-        float verticalDistance = castRayVertical(rayAngle, verticalHitX, verticalHitY);
-
-        // Determine the closer hit
-        bool isVerticalHit = verticalDistance < horizontalDistance;
-        float rayDistance = isVerticalHit ? verticalDistance : horizontalDistance;
-
-        // Correct fisheye distortion
-        rayDistance *= cos(playerAngle - rayAngle);
-
-        // Calculate wall height
-        float wallHeight = (mapUnitSize * 300.0f) / rayDistance;
-
-        // Draw the wall slice
-        drawWallSlice(rayIndex * (800.0f / 60.0f), wallHeight, isVerticalHit);
-
-        // Move to the next ray
-        rayAngle += (FOV / 60.0f);
         rayAngle = normalizeAngle(rayAngle);
+        float inverseSlope = -1.0f / tan(rayAngle);
+        float rayStepX, rayStepY;
+        int depthOfField = 0;
+
+        if (rayAngle > PI)
+        {
+            hitY = GRID_Y(playerY) * mapUnitSize - 0.0001f;
+            hitX = playerX + (playerY - hitY) * inverseSlope;
+            rayStepY = -mapUnitSize;
+            rayStepX = -rayStepY * inverseSlope;
+        }
+        else if (rayAngle < PI)
+        {
+            hitY = GRID_Y(playerY) * mapUnitSize + mapUnitSize;
+            hitX = playerX + (playerY - hitY) * inverseSlope;
+            rayStepY = mapUnitSize;
+            rayStepX = -rayStepY * inverseSlope;
+        }
+        else
+        {
+            return NO_HIT_DISTANCE;
+        }
+
+        while (depthOfField < MAX_DEPTH_OF_FIELD)
+        {
+            int mapGridX = GRID_X(hitX);
+            int mapGridY = GRID_Y(hitY);
+            int mapTileIndex = mapGridY * mapXUnits + mapGridX;
+
+            if (mapTileIndex >= 0 && mapTileIndex < mapXUnits * mapYUnits && map[mapTileIndex] == 1)
+            {
+                return sqrt((hitX - playerX) * (hitX - playerX) + (hitY - playerY) * (hitY - playerY));
+            }
+
+            hitX += rayStepX;
+            hitY += rayStepY;
+            depthOfField++;
+        }
+        return NO_HIT_DISTANCE;
     }
-}
+
+    // Cast vertical rays
+    float castRayVertical(float rayAngle, float& hitX, float& hitY)
+    {
+        rayAngle = normalizeAngle(rayAngle);
+        float slope = -tan(rayAngle);
+        float rayStepX, rayStepY;
+        int depthOfField = 0;
+
+        if (rayAngle > PI / 2 && rayAngle < 3 * PI / 2)
+        {
+            hitX = GRID_X(playerX) * mapUnitSize - 0.0001f;
+            hitY = (playerX - hitX) * slope + playerY;
+            rayStepX = -mapUnitSize;
+            rayStepY = -rayStepX * slope;
+        }
+        else if (rayAngle < PI / 2 || rayAngle > 3 * PI / 2)
+        {
+            hitX = GRID_X(playerX) * mapUnitSize + mapUnitSize;
+            hitY = (playerX - hitX) * slope + playerY;
+            rayStepX = mapUnitSize;
+            rayStepY = -rayStepX * slope;
+        }
+        else
+        {
+            return NO_HIT_DISTANCE;
+        }
+
+        while (depthOfField < MAX_DEPTH_OF_FIELD)
+        {
+            int mapGridX = GRID_X(hitX);
+            int mapGridY = GRID_Y(hitY);
+            int mapTileIndex = mapGridY * mapXUnits + mapGridX;
+
+            if (mapTileIndex >= 0 && mapTileIndex < mapXUnits * mapYUnits && map[mapTileIndex] == 1)
+            {
+                return sqrt((hitX - playerX) * (hitX - playerX) + (hitY - playerY) * (hitY - playerY));
+            }
+
+            hitX += rayStepX;
+            hitY += rayStepY;
+            depthOfField++;
+        }
+        return NO_HIT_DISTANCE;
+    }
+
+    // Draw wall slice
+    void drawWallSlice(float x, float wallHeight, bool isVertical)
+    {
+        float wallTop = (windowHeight / 2.0f) - (wallHeight / 2.0f);
+        float wallBottom = (windowHeight / 2.0f) + (wallHeight / 2.0f);
+        float wallSliceWidth = (float) windowWidth / 60.0f;
+
+        if (isVertical)
+        {
+            // Slightly darker for vertical walls
+            glColor3f(0.6f, 0.6f, 0.6f); 
+        }
+        else
+        {
+            // Brighter for horizontal walls
+            glColor3f(0.8f, 0.8f, 0.8f);
+        }
+
+        glBegin(GL_QUADS);
+        glVertex2f(x, wallTop);
+        glVertex2f(x + wallSliceWidth, wallTop);
+        glVertex2f(x + wallSliceWidth, wallBottom);
+        glVertex2f(x, wallBottom);
+        glEnd();
+    }
+
+    // Draw rays
+    void drawRays3D()
+    {
+        // Start ray at the left edge of FOV
+        float rayAngle = playerAngle - (FOV / 2); 
+
+        rayAngle = normalizeAngle(rayAngle);
+
+        float sliceWidth = (float) windowWidth / 60.0f;
+
+        for (int rayIndex = 0; rayIndex < 60; rayIndex++)
+        {
+            float horizontalHitX;
+            float horizontalHitY; 
+            float verticalHitX; 
+            float verticalHitY;
+
+            // Cast horizontal and vertical rays
+            float horizontalDistance = castRayHorizontal(rayAngle, horizontalHitX, horizontalHitY);
+            float verticalDistance = castRayVertical(rayAngle, verticalHitX, verticalHitY);
+
+            // Determine the closer hit
+            bool isVerticalHit = verticalDistance < horizontalDistance;
+            float rayDistance = isVerticalHit ? verticalDistance : horizontalDistance;
+
+            // Correct fisheye distortion
+            rayDistance *= cos(playerAngle - rayAngle);
+
+            // Calculate wall height
+            float wallHeight = (mapUnitSize * (windowHeight / 2.0f)) / rayDistance;
+
+            // Draw the wall slice
+            drawWallSlice(rayIndex * sliceWidth, wallHeight, isVerticalHit);
+
+            // Move to the next ray
+            rayAngle += (FOV / 60.0f);
+            rayAngle = normalizeAngle(rayAngle);
+        }
+    }
 
 // Start in 2D map mode
 bool renderMap = true;
@@ -308,18 +345,9 @@ void init()
     glClearColor(0.4f, 0.4f, 0.4f, 1.0f); // Set the clear color (gray background)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, 800, 600, 0, -1, 1); // Map 0,0 to top-left and 800,600 to bottom-right
+    glOrtho(0, windowWidth, windowHeight, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
-    // Set player starting position
-    playerX = 150.0f;
-    playerY = 150.0f;
-    playerAngle = PI / 4;
-
-    // Calculate movement deltas
-    playerDeltaX = cos(playerAngle);
-    playerDeltaY = sin(playerAngle);
 }
 
 // Main function
@@ -354,10 +382,20 @@ int main()
         return -1;
     }
 
-    // Initialize OpenGL settings
-    init();
+    // Register the viewport adjustment callback function
+    glfwSetFramebufferSizeCallback(window, adjustViewport);
     // Register the key callback function
     glfwSetKeyCallback(window, keyCallback);
+
+    // Initialize OpenGL settings
+    init();
+
+    int width;
+    int height;
+    // Get the size of the framebuffer
+    glfwGetFramebufferSize(window, &width, &height);
+    // Adjust the viewport to the framebuffer size
+    adjustViewport(window, width, height);
 
     // Main application loop
     while (!glfwWindowShouldClose(window))
