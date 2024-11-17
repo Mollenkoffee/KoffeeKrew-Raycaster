@@ -26,6 +26,10 @@ const int mapXUnits = 8;
 const int mapYUnits = 8;
 const int mapUnitSize = 64;
 
+// Start in 2D map mode
+bool renderMap = true;
+bool mapToggled = true;
+
 // Macros for grid coordinates
 #define GRID_X(worldX) ((int)(worldX) / mapUnitSize)
 #define GRID_Y(worldY) ((int)(worldY) / mapUnitSize)
@@ -150,217 +154,202 @@ void drawPlayer()
     glEnd();
 }
 
-    // Cast horizontal rays
-    float castRayHorizontal(float rayAngle, float& hitX, float& hitY)
-    {
-        rayAngle = normalizeAngle(rayAngle);
-        float inverseSlope = -1.0f / tan(rayAngle);
-        float rayStepX, rayStepY;
-        int depthOfField = 0;
-
-        if (rayAngle > PI)
-        {
-            hitY = GRID_Y(playerY) * mapUnitSize - 0.0001f;
-            hitX = playerX + (playerY - hitY) * inverseSlope;
-            rayStepY = -mapUnitSize;
-            rayStepX = -rayStepY * inverseSlope;
-        }
-        else if (rayAngle < PI)
-        {
-            hitY = GRID_Y(playerY) * mapUnitSize + mapUnitSize;
-            hitX = playerX + (playerY - hitY) * inverseSlope;
-            rayStepY = mapUnitSize;
-            rayStepX = -rayStepY * inverseSlope;
-        }
-        else
-        {
-            return NO_HIT_DISTANCE;
-        }
-
-        while (depthOfField < MAX_DEPTH_OF_FIELD)
-        {
-            int mapGridX = GRID_X(hitX);
-            int mapGridY = GRID_Y(hitY);
-            int mapTileIndex = mapGridY * mapXUnits + mapGridX;
-
-            if (mapTileIndex >= 0 && mapTileIndex < mapXUnits * mapYUnits && map[mapTileIndex] == 1)
-            {
-                return sqrt((hitX - playerX) * (hitX - playerX) + (hitY - playerY) * (hitY - playerY));
-            }
-
-            hitX += rayStepX;
-            hitY += rayStepY;
-            depthOfField++;
-        }
-        return NO_HIT_DISTANCE;
-    }
-
-    // Cast vertical rays
-    float castRayVertical(float rayAngle, float& hitX, float& hitY)
-    {
-        rayAngle = normalizeAngle(rayAngle);
-        float slope = -tan(rayAngle);
-        float rayStepX, rayStepY;
-        int depthOfField = 0;
-
-        if (rayAngle > PI / 2 && rayAngle < 3 * PI / 2)
-        {
-            hitX = GRID_X(playerX) * mapUnitSize - 0.0001f;
-            hitY = (playerX - hitX) * slope + playerY;
-            rayStepX = -mapUnitSize;
-            rayStepY = -rayStepX * slope;
-        }
-        else if (rayAngle < PI / 2 || rayAngle > 3 * PI / 2)
-        {
-            hitX = GRID_X(playerX) * mapUnitSize + mapUnitSize;
-            hitY = (playerX - hitX) * slope + playerY;
-            rayStepX = mapUnitSize;
-            rayStepY = -rayStepX * slope;
-        }
-        else
-        {
-            return NO_HIT_DISTANCE;
-        }
-
-        while (depthOfField < MAX_DEPTH_OF_FIELD)
-        {
-            int mapGridX = GRID_X(hitX);
-            int mapGridY = GRID_Y(hitY);
-            int mapTileIndex = mapGridY * mapXUnits + mapGridX;
-
-            if (mapTileIndex >= 0 && mapTileIndex < mapXUnits * mapYUnits && map[mapTileIndex] == 1)
-            {
-                return sqrt((hitX - playerX) * (hitX - playerX) + (hitY - playerY) * (hitY - playerY));
-            }
-
-            hitX += rayStepX;
-            hitY += rayStepY;
-            depthOfField++;
-        }
-        return NO_HIT_DISTANCE;
-    }
-
-    // Draw wall slice
-    void drawWallSlice(float x, float wallHeight, bool isVertical)
-    {
-        float wallTop = (windowHeight / 2.0f) - (wallHeight / 2.0f);
-        float wallBottom = (windowHeight / 2.0f) + (wallHeight / 2.0f);
-        float wallSliceWidth = (float) windowWidth / 60.0f;
-
-        if (isVertical)
-        {
-            // Slightly darker for vertical walls
-            glColor3f(0.6f, 0.6f, 0.6f); 
-        }
-        else
-        {
-            // Brighter for horizontal walls
-            glColor3f(0.8f, 0.8f, 0.8f);
-        }
-
-        glBegin(GL_QUADS);
-        glVertex2f(x, wallTop);
-        glVertex2f(x + wallSliceWidth, wallTop);
-        glVertex2f(x + wallSliceWidth, wallBottom);
-        glVertex2f(x, wallBottom);
-        glEnd();
-    }
-
-    // Draw rays
-    void drawRays3D()
-    {
-        // Start ray at the left edge of FOV
-        float rayAngle = playerAngle - (FOV / 2); 
-
-        rayAngle = normalizeAngle(rayAngle);
-
-        float sliceWidth = (float) windowWidth / 60.0f;
-
-        for (int rayIndex = 0; rayIndex < 60; rayIndex++)
-        {
-            float horizontalHitX;
-            float horizontalHitY; 
-            float verticalHitX; 
-            float verticalHitY;
-
-            // Cast horizontal and vertical rays
-            float horizontalDistance = castRayHorizontal(rayAngle, horizontalHitX, horizontalHitY);
-            float verticalDistance = castRayVertical(rayAngle, verticalHitX, verticalHitY);
-
-            // Determine the closer hit
-            bool isVerticalHit = verticalDistance < horizontalDistance;
-            float rayDistance = isVerticalHit ? verticalDistance : horizontalDistance;
-
-            // Correct fisheye distortion
-            rayDistance *= cos(playerAngle - rayAngle);
-
-            // Calculate wall height
-            float wallHeight = (mapUnitSize * (windowHeight / 2.0f)) / rayDistance;
-
-            // Draw the wall slice
-            drawWallSlice(rayIndex * sliceWidth, wallHeight, isVerticalHit);
-
-            // Move to the next ray
-            rayAngle += (FOV / 60.0f);
-            rayAngle = normalizeAngle(rayAngle);
-        }
-    }
-
-// Start in 2D map mode
-bool renderMap = true;
-
-// Callback function for key presses
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+// Cast horizontal rays
+float castRayHorizontal(float rayAngle, float& hitX, float& hitY)
 {
-    if (action == GLFW_PRESS || action == GLFW_REPEAT)
+    rayAngle = normalizeAngle(rayAngle);
+    float inverseSlope = -1.0f / tan(rayAngle);
+    float rayStepX, rayStepY;
+    int depthOfField = 0;
+
+    if (rayAngle > PI)
     {
-        switch (key)
+        hitY = GRID_Y(playerY) * mapUnitSize - 0.0001f;
+        hitX = playerX + (playerY - hitY) * inverseSlope;
+        rayStepY = -mapUnitSize;
+        rayStepX = -rayStepY * inverseSlope;
+    }
+    else if (rayAngle < PI)
+    {
+        hitY = GRID_Y(playerY) * mapUnitSize + mapUnitSize;
+        hitX = playerX + (playerY - hitY) * inverseSlope;
+        rayStepY = mapUnitSize;
+        rayStepX = -rayStepY * inverseSlope;
+    }
+    else
+    {
+        return NO_HIT_DISTANCE;
+    }
+
+    while (depthOfField < MAX_DEPTH_OF_FIELD)
+    {
+        int mapGridX = GRID_X(hitX);
+        int mapGridY = GRID_Y(hitY);
+        int mapTileIndex = mapGridY * mapXUnits + mapGridX;
+
+        if (mapTileIndex >= 0 && mapTileIndex < mapXUnits * mapYUnits && map[mapTileIndex] == 1)
         {
-        /* Deprecated in favor of processInput function
-        case GLFW_KEY_W:
-            playerX += playerDeltaX * PLAYER_SPEED;
-            playerY += playerDeltaY * PLAYER_SPEED;
-            break;
-        case GLFW_KEY_S:
-            playerX -= playerDeltaX * PLAYER_SPEED;
-            playerY -= playerDeltaY * PLAYER_SPEED;
-            break;
-        case GLFW_KEY_A:
-            playerAngle -= 0.1f;
-            playerAngle = normalizeAngle(playerAngle);
-            playerDeltaX = cos(playerAngle);
-            playerDeltaY = sin(playerAngle);
-            break;
-        case GLFW_KEY_D:
-            playerAngle += 0.1f;
-            playerAngle = normalizeAngle(playerAngle);
-            playerDeltaX = cos(playerAngle);
-            playerDeltaY = sin(playerAngle);
-            break;
-        */
-        case GLFW_KEY_M:
-            renderMap = !renderMap;
-            break;
+            return sqrt((hitX - playerX) * (hitX - playerX) + (hitY - playerY) * (hitY - playerY));
         }
+
+        hitX += rayStepX;
+        hitY += rayStepY;
+        depthOfField++;
+    }
+    return NO_HIT_DISTANCE;
+}
+
+// Cast vertical rays
+float castRayVertical(float rayAngle, float& hitX, float& hitY)
+{
+    rayAngle = normalizeAngle(rayAngle);
+    float slope = -tan(rayAngle);
+    float rayStepX, rayStepY;
+    int depthOfField = 0;
+
+    if (rayAngle > PI / 2 && rayAngle < 3 * PI / 2)
+    {
+        hitX = GRID_X(playerX) * mapUnitSize - 0.0001f;
+        hitY = (playerX - hitX) * slope + playerY;
+        rayStepX = -mapUnitSize;
+        rayStepY = -rayStepX * slope;
+    }
+    else if (rayAngle < PI / 2 || rayAngle > 3 * PI / 2)
+    {
+        hitX = GRID_X(playerX) * mapUnitSize + mapUnitSize;
+        hitY = (playerX - hitX) * slope + playerY;
+        rayStepX = mapUnitSize;
+        rayStepY = -rayStepX * slope;
+    }
+    else
+    {
+        return NO_HIT_DISTANCE;
+    }
+
+    while (depthOfField < MAX_DEPTH_OF_FIELD)
+    {
+        int mapGridX = GRID_X(hitX);
+        int mapGridY = GRID_Y(hitY);
+        int mapTileIndex = mapGridY * mapXUnits + mapGridX;
+
+        if (mapTileIndex >= 0 && mapTileIndex < mapXUnits * mapYUnits && map[mapTileIndex] == 1)
+        {
+            return sqrt((hitX - playerX) * (hitX - playerX) + (hitY - playerY) * (hitY - playerY));
+        }
+
+        hitX += rayStepX;
+        hitY += rayStepY;
+        depthOfField++;
+    }
+    return NO_HIT_DISTANCE;
+}
+
+// Draw wall slice
+void drawWallSlice(float x, float wallHeight, bool isVertical)
+{
+    float wallTop = (windowHeight / 2.0f) - (wallHeight / 2.0f);
+    float wallBottom = (windowHeight / 2.0f) + (wallHeight / 2.0f);
+    float wallSliceWidth = (float) windowWidth / 60.0f;
+
+    if (isVertical)
+    {
+        // Slightly darker for vertical walls
+        glColor3f(0.6f, 0.6f, 0.6f); 
+    }
+    else
+    {
+        // Brighter for horizontal walls
+        glColor3f(0.8f, 0.8f, 0.8f);
+    }
+
+    glBegin(GL_QUADS);
+    glVertex2f(x, wallTop);
+    glVertex2f(x + wallSliceWidth, wallTop);
+    glVertex2f(x + wallSliceWidth, wallBottom);
+    glVertex2f(x, wallBottom);
+    glEnd();
+}
+
+// Draw rays
+void drawRays3D()
+{
+    // Start ray at the left edge of FOV
+    float rayAngle = playerAngle - (FOV / 2); 
+
+    rayAngle = normalizeAngle(rayAngle);
+
+    float sliceWidth = (float) windowWidth / 60.0f;
+
+    for (int rayIndex = 0; rayIndex < 60; rayIndex++)
+    {
+        float horizontalHitX;
+        float horizontalHitY; 
+        float verticalHitX; 
+        float verticalHitY;
+
+        // Cast horizontal and vertical rays
+        float horizontalDistance = castRayHorizontal(rayAngle, horizontalHitX, horizontalHitY);
+        float verticalDistance = castRayVertical(rayAngle, verticalHitX, verticalHitY);
+
+        // Determine the closer hit
+        bool isVerticalHit = verticalDistance < horizontalDistance;
+        float rayDistance = isVerticalHit ? verticalDistance : horizontalDistance;
+
+        // Correct fisheye distortion
+        rayDistance *= cos(playerAngle - rayAngle);
+
+        // Calculate wall height
+        float wallHeight = (mapUnitSize * (windowHeight / 2.0f)) / rayDistance;
+
+        // Draw the wall slice
+        drawWallSlice(rayIndex * sliceWidth, wallHeight, isVerticalHit);
+
+        // Move to the next ray
+        rayAngle += (FOV / 60.0f);
+        rayAngle = normalizeAngle(rayAngle);
     }
 }
 
+// Check if the next position is colliding with a wall
+bool isColliding(float nextX, float nextY)
+{
+    int gridX = GRID_X(nextX);
+    int gridY = GRID_Y(nextY);
+    int mapIndex = gridY * mapXUnits + gridX;
+
+    if (mapIndex >= 0 && mapIndex < mapXUnits * mapYUnits)
+    {
+        // Return true if the next cell is a wall
+        return map[mapIndex] == 1;
+    }
+    return false;
+}
+
+// Process input
 void processInput(GLFWwindow* window)
 {
-    // Adjust speed by frame time
-    float moveSpeed = PLAYER_SPEED * deltaTime; 
-    // Adjust rotation by frame time
-    float rotateSpeed = 2.0f * deltaTime; 
+    float moveSpeed = PLAYER_SPEED * deltaTime;
+    float rotateSpeed = 2.0f * deltaTime;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
-        playerX += playerDeltaX * moveSpeed;
-        playerY += playerDeltaY * moveSpeed;
+        float nextX = playerX + playerDeltaX * moveSpeed;
+        float nextY = playerY + playerDeltaY * moveSpeed;
+        if (!isColliding(nextX, nextY))
+        {
+            playerX = nextX;
+            playerY = nextY;
+        }
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
-        playerX -= playerDeltaX * moveSpeed;
-        playerY -= playerDeltaY * moveSpeed;
+        float nextX = playerX - playerDeltaX * moveSpeed;
+        float nextY = playerY - playerDeltaY * moveSpeed;
+        if (!isColliding(nextX, nextY))
+        {
+            playerX = nextX;
+            playerY = nextY;
+        }
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
@@ -375,6 +364,15 @@ void processInput(GLFWwindow* window)
         playerAngle = normalizeAngle(playerAngle);
         playerDeltaX = cos(playerAngle);
         playerDeltaY = sin(playerAngle);
+    }
+    if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS && !mapToggled)
+    {
+        renderMap = !renderMap;
+        mapToggled = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_M) == GLFW_RELEASE)
+    {
+        mapToggled = false;
     }
 }
 
@@ -423,9 +421,6 @@ int main()
 
     // Register the viewport adjustment callback function
     glfwSetFramebufferSizeCallback(window, adjustViewport);
-    
-    // Register the key callback function
-    glfwSetKeyCallback(window, keyCallback);
 
     // Initialize OpenGL settings
     init();
