@@ -11,7 +11,8 @@
 #define NO_HIT_DISTANCE 1e30f
 #define FOV (PI / 3)
 #define MAX_DEPTH_OF_FIELD 8
-#define PLAYER_SPEED 100.0f
+#define PLAYER_MOVE_SPEED 100.0f
+#define PLAYER_ROTATE_SPEED 2.0f
 
 // Window dimensions
 int windowWidth = 800;
@@ -328,8 +329,9 @@ bool isColliding(float nextX, float nextY)
 // Process input
 void processInput(GLFWwindow* window)
 {
-    float moveSpeed = PLAYER_SPEED * deltaTime;
-    float rotateSpeed = 2.0f * deltaTime;
+    // Player Movement
+    float moveSpeed = PLAYER_MOVE_SPEED * deltaTime;
+    float rotateSpeed = PLAYER_ROTATE_SPEED * deltaTime;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
@@ -365,15 +367,16 @@ void processInput(GLFWwindow* window)
         playerDeltaX = cos(playerAngle);
         playerDeltaY = sin(playerAngle);
     }
-    if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS && !mapToggled)
-    {
+
+    // Map
+    static bool lastMapKeyState = GLFW_RELEASE;
+    int currentMapKeyState = glfwGetKey(window, GLFW_KEY_M);
+
+    if (currentMapKeyState == GLFW_PRESS && lastMapKeyState == GLFW_RELEASE) {
         renderMap = !renderMap;
-        mapToggled = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_M) == GLFW_RELEASE)
-    {
-        mapToggled = false;
-    }
+
+    lastMapKeyState = currentMapKeyState;
 }
 
 // Initialize OpenGL settings
