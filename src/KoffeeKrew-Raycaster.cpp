@@ -30,6 +30,12 @@ void processInput(GLFWwindow* window, Player& player, const Map& map, Renderer& 
     float moveSpeed = PLAYER_MOVE_SPEED * deltaTime;
     float rotateSpeed = PLAYER_ROTATE_SPEED * deltaTime;
 
+    // Sprinting
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
+    {
+        moveSpeed *= 1.5f;
+    }
+
     // Player movement
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
