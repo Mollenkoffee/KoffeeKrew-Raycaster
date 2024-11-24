@@ -3,8 +3,8 @@
 
 void Map::drawMap2D(int windowWidth, int windowHeight) const 
 {
-    float tileWidth = (float)windowWidth / mapXUnits;
-    float tileHeight = (float)windowHeight / mapYUnits;
+    float tileWidth = static_cast<float>(windowWidth) / mapXUnits;
+    float tileHeight = static_cast<float>(windowHeight) / mapYUnits;
 
     for (int y = 0; y < mapYUnits; y++) 
     {
@@ -12,11 +12,11 @@ void Map::drawMap2D(int windowWidth, int windowHeight) const
         {
             if (map[y * mapXUnits + x] == 1) 
             {
-                glColor3f(0.0f, 0.0f, 0.0f);  // Wall
+                glColor3f(0.0f, 0.0f, 0.0f); // Wall
             }
             else if (map[y * mapXUnits + x] == 0)
             {
-                glColor3f(1.0f, 1.0f, 1.0f);  // Empty space
+                glColor3f(1.0f, 1.0f, 1.0f); // Empty space
             }
 
             float tileX = x * tileWidth;
