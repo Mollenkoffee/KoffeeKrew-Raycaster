@@ -36,6 +36,12 @@ void processInput(GLFWwindow* window, Player& player, const Map& map, Renderer& 
         moveSpeed *= 1.5f;
     }
 
+    // Walking
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
+    {
+        moveSpeed *= 0.5f;
+    }
+
     // Player movement
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
