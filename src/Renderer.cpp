@@ -6,7 +6,7 @@ void Renderer::toggleRenderMap()
     renderMap = !renderMap;
 }
 
-void Renderer::render(const Map& map, const Player& player, const Raycaster& raycaster, int windowWidth, int windowHeight) 
+void Renderer::render(const Map& map, const Player& player, const Raycaster& raycaster, int windowWidth, int windowHeight, const Texture& texture)
 {
     if (renderMap) 
     {
@@ -15,6 +15,6 @@ void Renderer::render(const Map& map, const Player& player, const Raycaster& ray
     }
     else 
     {
-        raycaster.drawRays3D(player, map, windowWidth, windowHeight);
+        raycaster.drawRays3D(player, map, windowWidth, windowHeight, texture);
     }
 }

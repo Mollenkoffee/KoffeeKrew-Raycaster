@@ -85,37 +85,47 @@ float Raycaster::castRayVertical(float rayAngle, float playerX, float playerY, c
     return NO_HIT_DISTANCE;
 }
 
-void Raycaster::drawWallSlice(float x, float wallHeight, bool isVertical) const 
+void Raycaster::drawWallSlice(float x, float wallHeight, bool isVertical, int textureIndex, float hitX, float hitY, const Texture& texture) const 
 {
     float wallTop = (WINDOW_HEIGHT / 2.0f) - (wallHeight / 2.0f);
     float wallBottom = (WINDOW_HEIGHT / 2.0f) + (wallHeight / 2.0f);
     float wallSliceWidth = static_cast<float>(WINDOW_WIDTH) / 60.0f;
 
-    if (isVertical)
-    {
-        glColor3f(0.6f, 0.6f, 0.6f);
-    }
-    else
-    {
-        glColor3f(0.8f, 0.8f, 0.8f);
-    }
+    int textureColumn = static_cast<int>(isVertical ? fmod(hitY, Texture::TEXTURE_SIZE) : fmod(hitX, Texture::TEXTURE_SIZE));
 
-    glBegin(GL_QUADS);
-    glVertex2f(x, wallTop);
-    glVertex2f(x + wallSliceWidth, wallTop);
-    glVertex2f(x + wallSliceWidth, wallBottom);
-    glVertex2f(x, wallBottom);
-    glEnd();
+    // Avoid out-of-bounds errors
+    textureColumn = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureColumn));
+
+    // Apply shading based on hit direction
+    float shadingFactor = isVertical ? 0.6f : 1.0f;
+
+    for (int y = static_cast<int>(wallTop); y < static_cast<int>(wallBottom); ++y) 
+    {
+        int textureRow = static_cast<int>(((y - wallTop) / wallHeight) * Texture::TEXTURE_SIZE);
+        textureRow = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureRow));
+
+        int pixel = texture.getPixel(textureIndex, textureColumn, textureRow);
+
+        float colorIntensity = (pixel == 1) ? shadingFactor : shadingFactor * 0.5f;
+
+        glColor3f(colorIntensity, colorIntensity, colorIntensity);
+
+        glBegin(GL_QUADS);
+        glVertex2f(x, y);
+        glVertex2f(x + wallSliceWidth, y);
+        glVertex2f(x + wallSliceWidth, y + 1);
+        glVertex2f(x, y + 1);
+        glEnd();
+    }
 }
 
-void Raycaster::drawRays3D(const Player& player, const Map& map, int windowWidth, int windowHeight) const 
+void Raycaster::drawRays3D(const Player& player, const Map& map, int windowWidth, int windowHeight, const Texture& texture) const 
 {
     float rayAngle = player.angle - (FOV / 2);
 
     for (int rayIndex = 0; rayIndex < 60; ++rayIndex) 
     {
         float horizontalHitX, horizontalHitY, verticalHitX, verticalHitY;
-
         float horizontalDistance = castRayHorizontal(rayAngle, player.x, player.y, map, horizontalHitX, horizontalHitY);
         float verticalDistance = castRayVertical(rayAngle, player.x, player.y, map, verticalHitX, verticalHitY);
 
@@ -125,7 +135,9 @@ void Raycaster::drawRays3D(const Player& player, const Map& map, int windowWidth
         rayDistance *= cos(player.angle - rayAngle); // Correct fisheye distortion
         float wallHeight = (Map::mapUnitSize * (windowHeight / 2.0f)) / rayDistance;
 
-        drawWallSlice(rayIndex * (windowWidth / 60.0f), wallHeight, isVerticalHit);
+        int textureIndex = 1; // See textures in Texture.cpp
+        drawWallSlice(rayIndex * (windowWidth / 60.0f), wallHeight, isVerticalHit, textureIndex, isVerticalHit ? verticalHitX : horizontalHitX, isVerticalHit ? verticalHitY : horizontalHitY, texture);
+
         rayAngle += FOV / 60.0f;
     }
 }

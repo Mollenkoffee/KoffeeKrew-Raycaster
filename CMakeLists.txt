@@ -30,7 +30,7 @@ set(HEADERS
 )
 
 # Add the executable
-add_executable(KoffeeKrew-Raycaster ${SOURCES} ${HEADERS})
+add_executable(KoffeeKrew-Raycaster ${SOURCES} ${HEADERS} "include/Texture.h" "src/Texture.cpp")
 
 # Find and link OpenGL, GLFW, and GLEW
 find_package(OpenGL REQUIRED)

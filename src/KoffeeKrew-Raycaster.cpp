@@ -123,6 +123,7 @@ int main()
     Player player(150.0f, 150.0f, PI / 4);
     Raycaster raycaster;
     Renderer renderer;
+    Texture texture;
 
     // Main application loop
     while (!glfwWindowShouldClose(window)) 
@@ -135,7 +136,7 @@ int main()
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        renderer.render(map, player, raycaster, WINDOW_WIDTH, WINDOW_HEIGHT);
+        renderer.render(map, player, raycaster, WINDOW_WIDTH, WINDOW_HEIGHT, texture);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
