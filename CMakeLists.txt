@@ -20,19 +20,8 @@ set(SOURCES
     src/Texture.cpp
 )
 
-# Header files
-set(HEADERS
-    include/KoffeeKrew-Raycaster.h
-    include/Map.h
-    include/Player.h
-    include/Renderer.h
-    include/Raycaster.h
-    include/Constants.h
-    include/Texture.h
-)
-
 # Add the executable
-add_executable(KoffeeKrew-Raycaster ${SOURCES} ${HEADERS})
+add_executable(KoffeeKrew-Raycaster ${SOURCES})
 
 # Find and link OpenGL, GLFW, and GLEW
 find_package(OpenGL REQUIRED)
