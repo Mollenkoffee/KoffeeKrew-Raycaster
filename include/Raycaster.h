@@ -14,7 +14,7 @@ class Raycaster
     private:
         float castRayHorizontal(float rayAngle, float playerX, float playerY, const Map& map, float& hitX, float& hitY) const;
         float castRayVertical(float rayAngle, float playerX, float playerY, const Map& map, float& hitX, float& hitY) const;
-        void drawWallSlice(float x, float wallHeight, bool isVertical, int textureIndex, float hitX, float hitY, const Texture& texture) const;
+        void drawWallSlice(float x, float wallHeight, bool isVertical, int textureIndex, float hitX, float hitY, const Texture& texture, Map::TileType tileType) const;
 };
 
 #endif // RAYCASTER_H

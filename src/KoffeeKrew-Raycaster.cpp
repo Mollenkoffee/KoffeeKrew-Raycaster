@@ -25,7 +25,7 @@ void adjustViewport(GLFWwindow* window, int width, int height)
 }
 
 // Process user input
-void processInput(GLFWwindow* window, Player& player, const Map& map, Renderer& renderer) 
+void processInput(GLFWwindow* window, Player& player, Map& map, Renderer& renderer)
 {
     float moveSpeed = PLAYER_MOVE_SPEED * deltaTime;
     float rotateSpeed = PLAYER_ROTATE_SPEED * deltaTime;
@@ -60,11 +60,39 @@ void processInput(GLFWwindow* window, Player& player, const Map& map, Renderer& 
         player.rotate(rotateSpeed);
     }
 
-    // Toggle map rendering mode (2D or 3D)
+    // Door interaction
+    static bool doorKeyReleased = true;
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && doorKeyReleased)
+    {
+        int gridX = static_cast<int>(player.x) / Map::mapUnitSize;
+        int gridY = static_cast<int>(player.y) / Map::mapUnitSize;
+
+        for (int offsetX = -1; offsetX <= 1; ++offsetX)
+        {
+            for (int offsetY = -1; offsetY <= 1; ++offsetY)
+            {
+                int checkX = gridX + offsetX;
+                int checkY = gridY + offsetY;
+                if (map.isDoor(checkX, checkY))
+                {
+                    map.toggleDoor(checkX, checkY);
+                    break;
+                }
+            }
+        }
+        
+        doorKeyReleased = false;
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE)
+    {
+        doorKeyReleased = true;
+    }
+
+    // Toggle map rendering mode
     static bool lastToggleState = GLFW_RELEASE;
     int currentToggleState = glfwGetKey(window, GLFW_KEY_M);
 
-    if (currentToggleState == GLFW_PRESS && lastToggleState == GLFW_RELEASE) 
+    if (currentToggleState == GLFW_PRESS && lastToggleState == GLFW_RELEASE)
     {
         renderer.toggleRenderMap();
     }
@@ -120,7 +148,7 @@ int main()
 
     // Initialize game objects
     Map map;
-    Player player(150.0f, 150.0f, PI / 4);
+    Player player((Map::mapXUnits / 2.0f) * Map::mapUnitSize, (Map::mapYUnits / 2.0f) * Map::mapUnitSize, 3 * PI / 2);
     Raycaster raycaster;
     Renderer renderer;
     Texture texture;
