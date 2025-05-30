@@ -83,7 +83,7 @@ void initOpenGL()
     glLoadIdentity();
 }
 
-// Main application loop
+// Driver
 int main() 
 {
     // Initialize GLFW
