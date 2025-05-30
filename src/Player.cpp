@@ -14,9 +14,18 @@ void Player::move(float speed, const Map& map, int direction)
     float nextX = x + deltaX * speed * direction;
     float nextY = y + deltaY * speed * direction;
     
-    if (!map.isColliding(nextX, nextY)) 
+    const float collisionBuffer = 4.0f;
+
+    float futureX = deltaX * direction > 0 ? nextX + collisionBuffer : nextX - collisionBuffer;
+    float futureY = deltaY * direction > 0 ? nextY + collisionBuffer : nextY - collisionBuffer;
+
+    if (!map.isColliding(futureX, y))
     {
         x = nextX;
+    }
+
+    if (!map.isColliding(x, futureY))
+    {
         y = nextY;
     }
 }
