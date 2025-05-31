@@ -16,11 +16,11 @@ void Map::drawMap2D(int windowWidth, int windowHeight) const
             {
             // Wall
             case 1: 
-                glColor3f(1.0f, 0.5f, 0.3f);
+                glColor3f(1.0f, 0.0f, 0.0f);
                 break;
             // Closed Door
             case 2: 
-                glColor3f(0.6f, 0.3f, 0.1f);
+                glColor3f(0.0f, 1.0f, 0.0f);
                 break;
             // Open Door
             case 3: 

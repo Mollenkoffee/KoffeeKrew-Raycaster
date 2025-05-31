@@ -74,7 +74,7 @@ void Player::drawPlayer(int windowWidth, int windowHeight) const
     float endY = playerScreenY + dirY;
 
     // Draw player position
-    glColor3f(1.0f, 0.0f, 0.0f);
+    glColor3f(0.0f, 0.0f, 0.0f);
     glPointSize(8.0f);
     glBegin(GL_POINTS);
     glVertex2f(playerScreenX, playerScreenY);

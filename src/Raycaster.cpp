@@ -116,13 +116,13 @@ void Raycaster::drawWallSlice(float x, float wallHeight, bool isVertical, int te
         {
         case Map::TileType::WALL:
             r = 1.0f;
-            g = 0.5f;
-            b = 0.3f; 
+            g = 0.0f;
+            b = 0.0f; 
             break;
         case Map::TileType::DOOR_CLOSED:
-            r = 0.6f; 
-            g = 0.3f; 
-            b = 0.1f;
+            r = 0.0f; 
+            g = 1.0f; 
+            b = 0.0f;
             break;
         case Map::TileType::DOOR_OPEN:
             r = 1.0f;
@@ -182,7 +182,7 @@ void Raycaster::drawRays3D(const Player& player, const Map& map, int windowWidth
 
         if (tileType == Map::TileType::WALL)
         {
-            textureIndex = 1;
+            textureIndex = 2;
         }
         else if (tileType == Map::TileType::DOOR_CLOSED)
         {
