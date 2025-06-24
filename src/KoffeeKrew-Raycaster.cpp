@@ -64,23 +64,32 @@ void processInput(GLFWwindow* window, Player& player, Map& map, Renderer& render
     static bool doorKeyReleased = true;
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && doorKeyReleased)
     {
-        int gridX = static_cast<int>(player.x) / Map::mapUnitSize;
-        int gridY = static_cast<int>(player.y) / Map::mapUnitSize;
+        float maxInteractDist = 32.0f;
+        float rayStepDistance = 2.0f;
+        float raySampleX = player.x;
+        float raySampleY = player.y;
 
-        for (int offsetX = -1; offsetX <= 1; ++offsetX)
+        for (float dist = 0.0f; dist <= maxInteractDist; dist += rayStepDistance)
         {
-            for (int offsetY = -1; offsetY <= 1; ++offsetY)
+            raySampleX = player.x + player.deltaX * dist;
+            raySampleY = player.y + player.deltaY * dist;
+
+            int tileX = static_cast<int>(raySampleX) / Map::mapUnitSize;
+            int tileY = static_cast<int>(raySampleY) / Map::mapUnitSize;
+
+            int tile = map.getTile(tileX, tileY);
+
+            if (tile == Map::TileType::WALL)
             {
-                int checkX = gridX + offsetX;
-                int checkY = gridY + offsetY;
-                if (map.isDoor(checkX, checkY))
-                {
-                    map.toggleDoor(checkX, checkY);
-                    break;
-                }
+                break;
+            }
+
+            if (tile == Map::TileType::DOOR_CLOSED || tile == Map::TileType::DOOR_OPEN)
+            {
+                map.toggleDoor(tileX, tileY);
+                break;
             }
         }
-        
         doorKeyReleased = false;
     }
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE)
