@@ -64,11 +64,22 @@ void processInput(GLFWwindow* window, Player& player, Map& map, Renderer& render
     static bool doorKeyReleased = true;
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && doorKeyReleased)
     {
+        int playerTileX = static_cast<int>(player.x) / Map::mapUnitSize;
+        int playerTileY = static_cast<int>(player.y) / Map::mapUnitSize;
+        int currentTile = map.getTile(playerTileX, playerTileY);
+        
+        // Prevent door interaction while standing inside an open door
+        if (currentTile == Map::TileType::DOOR_OPEN)
+        {
+            return;
+        }
+        
         float maxInteractDist = 32.0f;
         float rayStepDistance = 2.0f;
         float raySampleX = player.x;
         float raySampleY = player.y;
 
+        // Check for ineract distance and player's facing direction
         for (float dist = 0.0f; dist <= maxInteractDist; dist += rayStepDistance)
         {
             raySampleX = player.x + player.deltaX * dist;
