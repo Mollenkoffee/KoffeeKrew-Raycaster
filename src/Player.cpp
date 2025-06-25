@@ -96,9 +96,11 @@ void Player::drawPlayer(int windowWidth, int windowHeight) const
     glEnd();
 
     // Draw door interaction ray
+    /*
     glColor3f(0.0f, 1.0f, 0.0f);
     glBegin(GL_LINES);
     glVertex2f(playerScreenX, playerScreenY);
     glVertex2f(playerScreenX + deltaX * 32 * scaleX, playerScreenY + deltaY * 32 * scaleY);
     glEnd();
+    */
 }
