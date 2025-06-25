@@ -30,6 +30,47 @@ void Player::move(float speed, const Map& map, int direction)
     }
 }
 
+void Player::moveSideways(float speed, const Map& map, int direction)
+{
+	float sideX = -deltaY * speed * direction;
+	float sideY = deltaX * speed * direction;
+
+	float nextX = x + sideX;
+	float nextY = y + sideY;
+
+	const float collisionBuffer = 4.0f;
+
+	float futureX = sideX > 0 ? nextX + collisionBuffer : nextX - collisionBuffer;
+	float futureY = sideY > 0 ? nextY + collisionBuffer : nextY - collisionBuffer;
+
+	if (!map.isColliding(futureX, y))
+	{
+		x = nextX;
+	}
+	if (!map.isColliding(x, futureY))
+	{
+		y = nextY;
+	}
+}
+
+void Player::moveAbsolute(float directionX, float directionY, const Map& map)
+{
+    const float collisionBuffer = 4.0f;
+
+    float futureX = directionX > 0 ? x + directionX + collisionBuffer : x + directionX - collisionBuffer;
+    float futureY = directionY > 0 ? y + directionY + collisionBuffer : y + directionY - collisionBuffer;
+
+    if (!map.isColliding(futureX, y))
+    {
+        x += directionX;
+    }
+
+    if (!map.isColliding(x, futureY))
+    {
+        y += directionY;
+    }
+}
+
 void Player::rotate(float angleDelta) 
 {
     angle += angleDelta;

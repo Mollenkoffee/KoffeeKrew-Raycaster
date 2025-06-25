@@ -83,19 +83,56 @@ void processInput(GLFWwindow* window, Player& player, Map& map, Renderer& render
     }
 
     // Player movement
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    float moveX = 0.0f;
+    float moveY = 0.0f;
+
+    // Forward/backward
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    {
+        moveX += player.deltaX;
+        moveY += player.deltaY;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    {
+        moveX -= player.deltaX;
+        moveY -= player.deltaY;
+    }
+
+    // Strafe left/right
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {
+        moveX += player.deltaY;
+        moveY -= player.deltaX;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
+        moveX -= player.deltaY;
+        moveY += player.deltaX;
+    }
+
+    // Normalize and move
+    float length = sqrt(moveX * moveX + moveY * moveY);
+    if (length > 0.01f)
+    {
+        moveX = (moveX / length) * moveSpeed;
+        moveY = (moveY / length) * moveSpeed;
+        player.moveAbsolute(moveX, moveY, map);
+    }
+    
+	// Directional key movement
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
     {
         player.move(moveSpeed, map, 1);
     }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
     {
         player.move(moveSpeed, map, -1);
     }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
     {
         player.rotate(-rotateSpeed);
     }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
     {
         player.rotate(rotateSpeed);
     }
