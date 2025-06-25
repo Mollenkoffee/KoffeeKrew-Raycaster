@@ -151,6 +151,82 @@ void Raycaster::drawWallSlice(float x, float wallHeight, bool isVertical, int te
     }
 }
 
+void Raycaster::drawCeilingSlice(float x, float wallTop, float rayAngle, float playerDist, const Player& player, const Texture& texture) const
+{
+    float wallSliceWidth = static_cast<float>(WINDOW_WIDTH) / 60.0f;
+
+    for (int y = 0; y < static_cast<int>(wallTop); ++y)
+    {
+        float distance = (Map::mapUnitSize * 0.5f * WINDOW_HEIGHT) / (WINDOW_HEIGHT / 2.0f - y);
+        float worldX = player.x + distance * cos(rayAngle);
+        float worldY = player.y + distance * sin(rayAngle);
+
+        int tileX = static_cast<int>(worldX) / Map::mapUnitSize;
+        int tileY = static_cast<int>(worldY) / Map::mapUnitSize;
+        
+        // Ensure texture coordinates are always positive and wrap correctly.
+        int textureX = ((static_cast<int>(worldX) % Texture::TEXTURE_SIZE) + Texture::TEXTURE_SIZE) % Texture::TEXTURE_SIZE;
+        int textureY = ((static_cast<int>(worldY) % Texture::TEXTURE_SIZE) + Texture::TEXTURE_SIZE) % Texture::TEXTURE_SIZE;
+
+        textureX = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureX));
+        textureY = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureY));
+
+        int pixel = texture.getPixel(4, textureX, textureY);
+
+        float baseIntensity = (pixel == 0) ? 0.6f : 1.0f;
+
+        float r = baseIntensity * 0.5f;
+        float g = baseIntensity * 0.5f;
+        float b = baseIntensity * 0.0f;
+
+        glColor3f(r, g, b);
+        glBegin(GL_QUADS);
+        glVertex2f(x, y);
+        glVertex2f(x + wallSliceWidth, y);
+        glVertex2f(x + wallSliceWidth, y + 1);
+        glVertex2f(x, y + 1);
+        glEnd();
+    }
+}
+
+void Raycaster::drawFloorSlice(float x, float wallBottom, float rayAngle, float playerDist, const Player& player, const Texture& texture) const
+{
+    float wallSliceWidth = static_cast<float>(WINDOW_WIDTH) / 60.0f;
+
+    for (int y = static_cast<int>(wallBottom); y < WINDOW_HEIGHT; ++y)
+    {
+        float distance = (Map::mapUnitSize * 0.5f * WINDOW_HEIGHT) / (y - WINDOW_HEIGHT / 2.0f);
+        float worldX = player.x + distance * cos(rayAngle);
+        float worldY = player.y + distance * sin(rayAngle);
+
+        int tileX = static_cast<int>(worldX) / Map::mapUnitSize;
+        int tileY = static_cast<int>(worldY) / Map::mapUnitSize;
+
+        // Ensure texture coordinates are always positive and wrap correctly.
+        int textureX = ((static_cast<int>(worldX) % Texture::TEXTURE_SIZE) + Texture::TEXTURE_SIZE) % Texture::TEXTURE_SIZE;
+        int textureY = ((static_cast<int>(worldY) % Texture::TEXTURE_SIZE) + Texture::TEXTURE_SIZE) % Texture::TEXTURE_SIZE;
+
+        textureX = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureX));
+        textureY = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureY));
+
+        int pixel = texture.getPixel(5, textureX, textureY);
+
+        float baseIntensity = (pixel == 1) ? 0.6f : 1.0f;
+
+        float r = baseIntensity * 0.0f;
+        float g = baseIntensity * 0.5f;
+        float b = baseIntensity * 0.5f;
+
+        glColor3f(r, g, b);
+        glBegin(GL_QUADS);
+        glVertex2f(x, y);
+        glVertex2f(x + wallSliceWidth, y);
+        glVertex2f(x + wallSliceWidth, y + 1);
+        glVertex2f(x, y + 1);
+        glEnd();
+    }
+}
+
 void Raycaster::drawRays3D(const Player& player, const Map& map, int windowWidth, int windowHeight, const Texture& texture) const
 {
     float rayAngle = player.angle - (FOV / 2);
@@ -193,6 +269,10 @@ void Raycaster::drawRays3D(const Player& player, const Map& map, int windowWidth
 		Map::TileType tileTypeEnum = static_cast<Map::TileType>(tileType);
 
         drawWallSlice(rayIndex * (windowWidth / 60.0f), wallHeight, isVerticalHit, textureIndex, hitX, hitY, texture, tileTypeEnum);
+
+        drawCeilingSlice(rayIndex * (windowWidth / 60.0f), (WINDOW_HEIGHT / 2.0f) - (wallHeight / 2.0f), rayAngle, rayDistance, player, texture);
+
+        drawFloorSlice(rayIndex * (windowWidth / 60.0f), (WINDOW_HEIGHT / 2.0f) + (wallHeight / 2.0f), rayAngle, rayDistance, player, texture);
 
         rayAngle += FOV / 60.0f;
     }

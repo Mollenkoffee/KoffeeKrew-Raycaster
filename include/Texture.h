@@ -3,14 +3,15 @@
 
 #include <vector>
 
-class Texture {
-public:
-    static const int TEXTURE_SIZE = 32;
+class Texture 
+{
+    public:
+        static const int TEXTURE_SIZE = 32;
 
-    std::vector<int> textures;
+        std::vector<int> textures;
 
-    Texture();
-    int getPixel(int textureIndex, int x, int y) const;
+        Texture();
+        int getPixel(int textureIndex, int x, int y) const;
 };
 
 #endif // TEXTURE_H
