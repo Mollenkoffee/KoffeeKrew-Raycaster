@@ -9,6 +9,10 @@ int WINDOW_HEIGHT = 600;
 float deltaTime = 0.0f;
 float lastFrameTime = 0.0f;
 
+// Mouse variables
+double lastMouseX = 0.0;
+bool firstMouseInput = true;
+
 // Adjust OpenGL viewport when window size changes
 void adjustViewport(GLFWwindow* window, int width, int height) 
 {
@@ -27,6 +31,42 @@ void adjustViewport(GLFWwindow* window, int width, int height)
 // Process user input
 void processInput(GLFWwindow* window, Player& player, Map& map, Renderer& renderer)
 {
+    static bool cursorLocked = true;
+    static bool escKeyReleased = true;
+
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && escKeyReleased)
+    {
+        escKeyReleased = false;
+        cursorLocked = !cursorLocked;
+
+        glfwSetInputMode(window, GLFW_CURSOR, cursorLocked ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+        glfwSetCursorPos(window, WINDOW_WIDTH / 2.0, WINDOW_HEIGHT / 2.0);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_RELEASE)
+    {
+        escKeyReleased = true;
+    }
+
+    double mouseX, mouseY;
+    glfwGetCursorPos(window, &mouseX, &mouseY);
+
+    if (firstMouseInput)
+    {
+        lastMouseX = mouseX;
+        firstMouseInput = false;
+    }
+
+    double deltaX = mouseX - lastMouseX;
+    lastMouseX = mouseX;
+
+    // Sensitivity scaling
+    float sensitivity = 0.0005f;
+    if (cursorLocked)
+    {
+        player.rotate(static_cast<float>(deltaX) * sensitivity);
+    }
+
     float moveSpeed = PLAYER_MOVE_SPEED * deltaTime;
     float rotateSpeed = PLAYER_ROTATE_SPEED * deltaTime;
 
@@ -150,6 +190,16 @@ int main()
     }
     glfwMakeContextCurrent(window);
 
+    if (glfwRawMouseMotionSupported())
+    {
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
+    else
+    {
+        std::cerr << "Raw mouse motion not supported!" << std::endl;
+    }
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
     // Initialize GLEW
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) 
