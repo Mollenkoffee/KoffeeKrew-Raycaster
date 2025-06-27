@@ -260,6 +260,11 @@ int main()
     Renderer renderer;
     Texture texture;
 
+    texture.loadFromFile(TEX_FILE_WALL, "n64guy-CC0-textures/Rock 3.png");
+    texture.loadFromFile(TEX_FILE_DOOR_CLOSED, "n64guy-CC0-textures/Planks.png");
+    texture.loadFromFile(TEX_FILE_CEILING, "n64guy-CC0-textures/Rock 5.png");
+    texture.loadFromFile(TEX_FILE_FLOOR, "n64guy-CC0-textures/Dirt.png");
+
     // Main application loop
     while (!glfwWindowShouldClose(window)) 
     {

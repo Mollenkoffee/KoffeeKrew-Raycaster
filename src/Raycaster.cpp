@@ -91,57 +91,69 @@ void Raycaster::drawWallSlice(float x, float wallHeight, bool isVertical, int te
     float wallBottom = (WINDOW_HEIGHT / 2.0f) + (wallHeight / 2.0f);
     float wallSliceWidth = static_cast<float>(WINDOW_WIDTH) / 60.0f;
 
-    int textureColumn = static_cast<int>(isVertical ? fmod(hitY, Texture::TEXTURE_SIZE) : fmod(hitX, Texture::TEXTURE_SIZE));
+    int textureColumn = static_cast<int>(isVertical ? fmod(hitY, TEXTURE_SIZE) : fmod(hitX, TEXTURE_SIZE));
 
     // Avoid out-of-bounds errors
-    textureColumn = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureColumn));
+    textureColumn = std::max(0, std::min(TEXTURE_SIZE - 1, textureColumn));
 
     // Apply shading based on hit direction
     float shadingFactor = isVertical ? 0.6f : 1.0f;
 
     for (int y = static_cast<int>(wallTop); y < static_cast<int>(wallBottom); ++y) 
     {
-        int textureRow = static_cast<int>(((y - wallTop) / wallHeight) * Texture::TEXTURE_SIZE);
-        textureRow = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureRow));
+        int textureRow = static_cast<int>(((y - wallTop) / wallHeight) * TEXTURE_SIZE);
+        textureRow = std::max(0, std::min(TEXTURE_SIZE - 1, textureRow));
 
-        int pixel = texture.getPixel(textureIndex, textureColumn, textureRow);
-
-        float colorIntensity = (pixel == 1) ? shadingFactor : shadingFactor * 0.5f;
-
-        float r = 1.0f;
-        float g = 1.0f; 
-        float b = 1.0f;
-        
-        switch (tileType)
+        if (TEXTURE_MODE == TextureMode::ARRAY)
         {
-        case Map::TileType::WALL:
-            r = 1.0f;
-            g = 0.0f;
-            b = 0.0f; 
-            break;
-        case Map::TileType::DOOR_CLOSED:
-            r = 0.0f; 
-            g = 1.0f; 
-            b = 0.0f;
-            break;
-        case Map::TileType::DOOR_OPEN:
-            r = 1.0f;
-            g = 1.0f;
-            b = 1.0f;
-            break;
-        default:
-            r = 1.0f;
-            g = 1.0f;
-            b = 1.0f;
-            break;
+            int pixel = texture.getPixelArrayTexture(textureIndex, textureColumn, textureRow);
+
+            float colorIntensity = (pixel == 1) ? shadingFactor : shadingFactor * 0.5f;
+
+            float r = 1.0f;
+            float g = 1.0f;
+            float b = 1.0f;
+
+            switch (tileType)
+            {
+            case Map::TileType::WALL:
+                r = 1.0f;
+                g = 0.0f;
+                b = 0.0f;
+                break;
+            case Map::TileType::DOOR_CLOSED:
+                r = 0.0f;
+                g = 1.0f;
+                b = 0.0f;
+                break;
+            default:
+                r = 1.0f;
+                g = 1.0f;
+                b = 1.0f;
+                break;
+            }
+
+            float finalR = r * shadingFactor * colorIntensity;
+            float finalG = g * shadingFactor * colorIntensity;
+            float finalB = b * shadingFactor * colorIntensity;
+
+            glColor3f(finalR, finalG, finalB);
         }
+		else if (TEXTURE_MODE == TextureMode::FILE)
+		{
+            int pixel = texture.getPixelFileTexture(textureIndex, textureColumn, textureRow);
 
-        float finalR = r * shadingFactor * colorIntensity;
-        float finalG = g * shadingFactor * colorIntensity;
-        float finalB = b * shadingFactor * colorIntensity;
+            float r = ((pixel >> 16) & 0xFF) / 255.0f;
+            float g = ((pixel >> 8) & 0xFF) / 255.0f;
+            float b = (pixel & 0xFF) / 255.0f;
 
-        glColor3f(finalR, finalG, finalB);
+            r *= shadingFactor;
+            g *= shadingFactor;
+            b *= shadingFactor;
 
+            glColor3f(r, g, b);
+		}
+        
         glBegin(GL_QUADS);
         glVertex2f(x, y);
         glVertex2f(x + wallSliceWidth, y);
@@ -165,21 +177,35 @@ void Raycaster::drawCeilingSlice(float x, float wallTop, float rayAngle, float p
         int tileY = static_cast<int>(worldY) / Map::mapUnitSize;
         
         // Ensure texture coordinates are always positive and wrap correctly.
-        int textureX = ((static_cast<int>(worldX) % Texture::TEXTURE_SIZE) + Texture::TEXTURE_SIZE) % Texture::TEXTURE_SIZE;
-        int textureY = ((static_cast<int>(worldY) % Texture::TEXTURE_SIZE) + Texture::TEXTURE_SIZE) % Texture::TEXTURE_SIZE;
+        int textureX = ((static_cast<int>(worldX) % TEXTURE_SIZE) + TEXTURE_SIZE) % TEXTURE_SIZE;
+        int textureY = ((static_cast<int>(worldY) % TEXTURE_SIZE) + TEXTURE_SIZE) % TEXTURE_SIZE;
 
-        textureX = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureX));
-        textureY = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureY));
+        textureX = std::max(0, std::min(TEXTURE_SIZE - 1, textureX));
+        textureY = std::max(0, std::min(TEXTURE_SIZE - 1, textureY));
 
-        int pixel = texture.getPixel(4, textureX, textureY);
+        if (TEXTURE_MODE == TextureMode::ARRAY)
+        {
+            int pixel = texture.getPixelArrayTexture(TEX_ARRAY_TILE_PATTERN_1, textureX, textureY);
 
-        float baseIntensity = (pixel == 0) ? 0.6f : 1.0f;
+            float baseIntensity = (pixel == 0) ? 0.6f : 1.0f;
 
-        float r = baseIntensity * 0.5f;
-        float g = baseIntensity * 0.5f;
-        float b = baseIntensity * 0.0f;
+            float r = baseIntensity * 0.5f;
+            float g = baseIntensity * 0.5f;
+            float b = baseIntensity * 0.0f;
 
-        glColor3f(r, g, b);
+            glColor3f(r, g, b);
+        }
+        else if (TEXTURE_MODE == TextureMode::FILE)
+        {
+            int pixel = texture.getPixelFileTexture(TEX_FILE_CEILING, textureX, textureY);
+
+            float r = ((pixel >> 16) & 0xFF) / 255.0f;
+            float g = ((pixel >> 8) & 0xFF) / 255.0f;
+            float b = (pixel & 0xFF) / 255.0f;
+
+            glColor3f(r, g, b);
+        }
+        
         glBegin(GL_QUADS);
         glVertex2f(x, y);
         glVertex2f(x + wallSliceWidth, y);
@@ -203,21 +229,35 @@ void Raycaster::drawFloorSlice(float x, float wallBottom, float rayAngle, float 
         int tileY = static_cast<int>(worldY) / Map::mapUnitSize;
 
         // Ensure texture coordinates are always positive and wrap correctly.
-        int textureX = ((static_cast<int>(worldX) % Texture::TEXTURE_SIZE) + Texture::TEXTURE_SIZE) % Texture::TEXTURE_SIZE;
-        int textureY = ((static_cast<int>(worldY) % Texture::TEXTURE_SIZE) + Texture::TEXTURE_SIZE) % Texture::TEXTURE_SIZE;
+        int textureX = ((static_cast<int>(worldX) % TEXTURE_SIZE) + TEXTURE_SIZE) % TEXTURE_SIZE;
+        int textureY = ((static_cast<int>(worldY) % TEXTURE_SIZE) + TEXTURE_SIZE) % TEXTURE_SIZE;
 
-        textureX = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureX));
-        textureY = std::max(0, std::min(Texture::TEXTURE_SIZE - 1, textureY));
+        textureX = std::max(0, std::min(TEXTURE_SIZE - 1, textureX));
+        textureY = std::max(0, std::min(TEXTURE_SIZE - 1, textureY));
 
-        int pixel = texture.getPixel(5, textureX, textureY);
+        if (TEXTURE_MODE == TextureMode::ARRAY)
+        {
+            int pixel = texture.getPixelArrayTexture(TEX_ARRAY_TILE_PATTERN_2, textureX, textureY);
 
-        float baseIntensity = (pixel == 1) ? 0.6f : 1.0f;
+            float baseIntensity = (pixel == 1) ? 0.6f : 1.0f;
 
-        float r = baseIntensity * 0.0f;
-        float g = baseIntensity * 0.5f;
-        float b = baseIntensity * 0.5f;
+            float r = baseIntensity * 0.0f;
+            float g = baseIntensity * 0.5f;
+            float b = baseIntensity * 0.5f;
 
-        glColor3f(r, g, b);
+			glColor3f(r, g, b);
+		}
+		else if (TEXTURE_MODE == TextureMode::FILE)
+		{
+			int pixel = texture.getPixelFileTexture(TEX_FILE_FLOOR, textureX, textureY);
+
+			float r = ((pixel >> 16) & 0xFF) / 255.0f;
+			float g = ((pixel >> 8) & 0xFF) / 255.0f;
+			float b = (pixel & 0xFF) / 255.0f;
+
+			glColor3f(r, g, b);
+        }
+        
         glBegin(GL_QUADS);
         glVertex2f(x, y);
         glVertex2f(x + wallSliceWidth, y);
@@ -250,21 +290,41 @@ void Raycaster::drawRays3D(const Player& player, const Map& map, int windowWidth
         int tileX = static_cast<int>(hitX) / Map::mapUnitSize;
         int tileY = static_cast<int>(hitY) / Map::mapUnitSize;
 
-        // Default to wall texture
-        int textureIndex = 2;
-
         // Look up tile type from map
         int tileType = map.getTile(tileX, tileY); 
 
-        if (tileType == Map::TileType::WALL)
-        {
-            textureIndex = 2;
-        }
-        else if (tileType == Map::TileType::DOOR_CLOSED)
-        {
-            textureIndex = 3;
-        }
+        int textureIndex = 0;
 
+        if (TEXTURE_MODE == TextureMode::ARRAY)
+        {
+            if (tileType == Map::TileType::WALL)
+            {
+                textureIndex = TEX_ARRAY_BRICK;
+            } 
+            else if (tileType == Map::TileType::DOOR_CLOSED)
+            {
+                textureIndex = TEX_ARRAY_SQUARE_PATTERN;
+            }
+            else
+            {
+                textureIndex = TEX_ARRAY_DEFAULT;
+            }
+        }
+        else if (TEXTURE_MODE == TextureMode::FILE)
+        {
+            if (tileType == Map::TileType::WALL)
+            {
+                textureIndex = TEX_FILE_WALL;
+            }
+            else if (tileType == Map::TileType::DOOR_CLOSED)
+            {
+                textureIndex = TEX_FILE_DOOR_CLOSED;
+            }
+            else
+            {
+                textureIndex = TEX_FILE_DEFAULT;
+            }
+        }
 		
 		Map::TileType tileTypeEnum = static_cast<Map::TileType>(tileType);
 
